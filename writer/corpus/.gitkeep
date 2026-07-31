@@ -1,0 +1,2 @@
+Plaintext files placed here are chunked into the creative pool by
+`python sources.py --pool creative`. The contents are gitignored.

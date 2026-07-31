@@ -1,0 +1,2 @@
+# One arXiv ID per line, e.g. 2301.00001 or cond-mat/0703470.
+# A hand-picked list of ~50 papers outperforms a category firehose.
