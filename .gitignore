@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local corpus (add your own texts; they are not part of the repo)
+writer/corpus/*
+!writer/corpus/.gitkeep
+
+# OS
+.DS_Store

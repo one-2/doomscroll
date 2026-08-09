@@ -1,0 +1,63 @@
+:root {
+  --paper: #faf8f4;
+  --ink: #1c1a17;
+  --faint: #a9a196;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #12110f;
+    --ink: #ddd7cd;
+    --faint: #5b554c;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+    "Times New Roman", serif;
+  font-size: 1.15rem;
+  line-height: 1.75;
+  text-rendering: optimizeLegibility;
+}
+
+main {
+  max-width: 66ch;
+  margin: 0 auto;
+  padding: 6rem 1.5rem 24rem;
+}
+
+article + article {
+  margin-top: 7rem;
+}
+
+p + p {
+  margin-top: 1.4rem;
+}
+
+.day {
+  color: var(--faint);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 3rem;
+}
+
+article:first-child .day {
+  margin-top: 0;
+}
+
+article + article .day {
+  margin-top: -2rem;
+}

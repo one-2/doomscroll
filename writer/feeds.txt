@@ -1,0 +1,2 @@
+# One RSS or Atom feed URL per line. Blank lines and # comments are ignored.
+# Five to fifteen feeds with a deliberate slant work better than a wire service.

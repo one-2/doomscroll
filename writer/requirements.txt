@@ -1,0 +1,5 @@
+anthropic>=0.116
+psycopg[binary]>=3.2
+feedparser>=6.0
+requests>=2.32
+beautifulsoup4>=4.12
