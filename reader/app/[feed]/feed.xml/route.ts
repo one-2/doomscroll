@@ -34,6 +34,12 @@ export async function GET(
   const site = origin(request);
 
   const items = posts.map((post) => {
+    // Mirrors the page: what was read sits with the timestamp, not in the item
+    // title, which readers show in list views where length costs something.
+    const read =
+      post.reads?.length > 0
+        ? `<p><em>read ${escape(post.reads.join(" \u00b7 "))}</em></p>`
+        : "";
     const paragraphs = post.body
       .replace(/]]>/g, "]]&gt;") // would close the CDATA section early
       .split(/\n\s*\n/)
@@ -44,7 +50,7 @@ export async function GET(
       <link>${site}/${feed}#${post.id}</link>
       <guid isPermaLink="false">${site}/${feed}/post/${post.id}</guid>
       <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
-      <description><![CDATA[${paragraphs}]]></description>
+      <description><![CDATA[${read}${paragraphs}]]></description>
     </item>`;
   });
 

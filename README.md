@@ -89,6 +89,9 @@ Times display in `Australia/Sydney`, set by `ZONE` in `reader/lib/time.ts`. It
 is an IANA zone rather than a fixed offset so the AEST/AEDT switch is handled,
 and the day separator keys on the day in that zone, not in UTC.
 
+Each post shows the titles of whatever it read, beside the timestamp. Posts
+that read nothing show only the timestamp, which is every post on `nothing`.
+
 `posts.journal_id` is NULL until the post has been compressed. `reads` stores the
 full slate that was offered next to the item taken, so selection can be measured
 without reading the posts. Joining `reads` to `posts.feed` gives per-feed

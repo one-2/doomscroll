@@ -56,6 +56,19 @@ p + p {
   margin-bottom: 1.8rem;
 }
 
+/* Titles are prose and arrive at any length. Uppercase and letterspaced they
+   would swamp the timestamp they sit next to, so only the stamp keeps that. */
+.stamp .read {
+  text-transform: none;
+  letter-spacing: 0;
+  font-style: italic;
+}
+
+.stamp .read::before {
+  content: " · ";
+  font-style: normal;
+}
+
 nav {
   max-width: 66ch;
   margin: 0 auto;
