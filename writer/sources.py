@@ -14,6 +14,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urljoin
 
 import feedparser
 import requests
@@ -21,7 +22,8 @@ from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 import db
-from config import ARXIV_API, ARXIV_DELAY, CHUNK_TOK, FETCH_TIMEOUT, approx_tokens
+from config import (ARXIV_API, ARXIV_DELAY, CHUNK_TOK, CREATIVE_DELAY,
+                    CREATIVE_INDEX, FETCH_TIMEOUT, approx_tokens)
 
 log = logging.getLogger(__name__)
 HERE = Path(__file__).parent
@@ -188,16 +190,68 @@ def chunk(text: str, budget: int = CHUNK_TOK) -> list[str]:
     return chunks
 
 
-def ingest_creative(conn) -> int:
+def _index_links(index_url: str) -> list[tuple[str, str]]:
+    """Documents linked from one index page. One level, no recursion."""
+    page = _fetch(index_url)
+    if page is None:
+        return []
+    soup = BeautifulSoup(page, "html.parser")
+    base = index_url.rsplit("/", 1)[0] + "/"
+    seen, out = set(), []
+    for a in soup.find_all("a", href=True):
+        url = urljoin(base, a["href"]).split("#")[0]
+        if url in seen or url == index_url:
+            continue
+        if not url.startswith(base):     # stay in the index's own directory
+            continue
+        if not url.lower().endswith((".html", ".htm", ".pdf")):
+            continue
+        seen.add(url)
+        out.append((" ".join(a.get_text(" ", strip=True).split()), url))
+    return out
+
+
+def _store_chunks(conn, ref: str, title: str, text: str) -> int:
+    written = 0
+    for n, piece in enumerate(chunk(text), start=1):
+        teaser = " ".join(piece.split())[:300]
+        if db.upsert_source(conn, "creative", f"{ref}#{n}",
+                            f"{title} §{n}", teaser, piece):
+            written += 1
+    return written
+
+
+def ingest_creative(conn, limit: int | None = None) -> int:
+    """Local files in corpus/, then the documents linked from CREATIVE_INDEX.
+
+    One request every CREATIVE_DELAY seconds, sequentially, one level deep.
+    A document already stored is not fetched again.
+    """
     written = 0
     for path in sorted(CORPUS.glob("*.txt")):
-        pieces = chunk(path.read_text(encoding="utf-8", errors="replace"))
-        for n, piece in enumerate(pieces, start=1):
-            title = f"{path.name} §{n}"
-            teaser = piece.strip().splitlines()[0][:300]
-            if db.upsert_source(conn, "creative", f"corpus:{path.name}#{n}",
-                                title, teaser, piece):
-                written += 1
+        written += _store_chunks(conn, f"corpus:{path.name}", path.name,
+                                 path.read_text(encoding="utf-8", errors="replace"))
+
+    links = _index_links(CREATIVE_INDEX)
+    log.info("%d documents linked from %s", len(links), CREATIVE_INDEX)
+    if limit is not None:
+        links = links[:limit]
+
+    for n, (title, url) in enumerate(links, start=1):
+        if db.source_exists(conn, f"{url}#1"):
+            continue
+        time.sleep(CREATIVE_DELAY)
+        if url.lower().endswith(".pdf"):
+            text = _pdf_text(url)
+        else:
+            page = _fetch(url)
+            text = _text(page) if page else None
+        if not text or approx_tokens(text) < 100:
+            continue
+        written += _store_chunks(conn, url, title or url.rsplit("/", 1)[-1], text)
+        if n % 25 == 0:
+            conn.commit()
+            log.info("  %d/%d documents, %d chunks", n, len(links), written)
     return written
 
 
@@ -240,10 +294,15 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pool", required=True, choices=sorted(POOLS))
+    parser.add_argument("--limit", type=int, default=None,
+                        help="stop after this many documents (creative only)")
     args = parser.parse_args()
 
     with db.connect() as conn:
-        written = POOLS[args.pool](conn)
+        if args.pool == "creative":
+            written = ingest_creative(conn, limit=args.limit)
+        else:
+            written = POOLS[args.pool](conn)
         conn.commit()
     log.info("%s: %d new source(s)", args.pool, written)
     return 0
