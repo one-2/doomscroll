@@ -1,9 +1,13 @@
 import { neon } from "@neondatabase/serverless";
 
-const url = process.env.DATABASE_URL_RO ?? process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL_RO is not set");
-
-const sql = neon(url);
+// Resolved per request, not at module load: Next imports this module while
+// collecting page configuration, so reading the environment at the top level
+// turns a missing variable into a failed build rather than a failed request.
+function connect() {
+  const url = process.env.DATABASE_URL_RO ?? process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL_RO is not set");
+  return neon(url);
+}
 
 export const PAGE_SIZE = 25;
 
@@ -19,6 +23,7 @@ const CREATED = `to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS
 
 /** Newest first. `cursor` is a post id; results are strictly older than it. */
 export async function page(cursor?: number): Promise<Post[]> {
+  const sql = connect();
   const rows = cursor
     ? await sql`SELECT id, ${sql.unsafe(CREATED)}, body FROM posts
                 WHERE id < ${cursor} ORDER BY id DESC LIMIT ${PAGE_SIZE}`
