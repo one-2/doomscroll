@@ -2,10 +2,13 @@
 
     python sources.py --pool news       hourly, alongside post.py
     python sources.py --pool preprint   one-off backfill from preprints.txt
+                                        and documents.tsv
     python sources.py --pool creative   one-off backfill from corpus/
 """
 
 import argparse
+import csv
+import io
 import logging
 import re
 import sys
@@ -15,6 +18,7 @@ from pathlib import Path
 import feedparser
 import requests
 from bs4 import BeautifulSoup
+from pypdf import PdfReader
 
 import db
 from config import ARXIV_API, ARXIV_DELAY, CHUNK_TOK, FETCH_TIMEOUT, approx_tokens
@@ -24,24 +28,58 @@ HERE = Path(__file__).parent
 CORPUS = HERE / "corpus"
 FEEDS = HERE / "feeds.txt"
 PREPRINTS = HERE / "preprints.txt"
+DOCUMENTS = HERE / "documents.tsv"
 UA = {"User-Agent": "feed/0.1 (source ingestion; contact via repository)"}
 
 
-def _lines(path: Path) -> list[str]:
+def _entries(path: Path) -> list[tuple[str, str]]:
+    """Each line is a value with an optional trailing `# comment`, which the
+    lists use to carry the source's title. Whole-line comments are ignored."""
     if not path.exists():
         return []
-    return [
-        line.strip()
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.startswith("#")
-    ]
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = re.split(r"\s+#", line, maxsplit=1)
+        out.append((parts[0].strip(), parts[1].strip() if len(parts) > 1 else ""))
+    return out
+
+
+def _lines(path: Path) -> list[str]:
+    return [value for value, _ in _entries(path)]
 
 
 def _text(html: str) -> str:
+    """Readable text. Prefers the main content element when the page has one."""
     soup = BeautifulSoup(html, "html.parser")
-    for tag in soup(["script", "style", "nav", "header", "footer", "aside"]):
+    for tag in soup(["script", "style", "nav", "header", "footer", "aside",
+                     "form", "noscript", "iframe", "svg"]):
         tag.decompose()
-    return re.sub(r"\n{3,}", "\n\n", soup.get_text("\n")).strip()
+    root = soup.find("article") or soup.find("main") or soup
+    return re.sub(r"\n{3,}", "\n\n", root.get_text("\n")).strip()
+
+
+def _description(html: str) -> str:
+    """The page's own summary, which beats the first two sentences of chrome."""
+    soup = BeautifulSoup(html, "html.parser")
+    for name, key in (("description", "name"), ("og:description", "property"),
+                      ("twitter:description", "name")):
+        tag = soup.find("meta", attrs={key: name})
+        if tag and tag.get("content", "").strip():
+            return " ".join(tag["content"].split())
+    return ""
+
+
+def _unwrap(text: str) -> str:
+    """PDF extraction often emits one word per line. Collapse every newline,
+    then break again only where a sentence ended."""
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\s*\n\s*", "\n", text)
+    text = re.sub(r"(?<![.!?:])\n", " ", text)
+    text = re.sub(r"\n+", "\n\n", text)
+    return text.strip()
 
 
 def _sentences(text: str, n: int) -> str:
@@ -63,7 +101,7 @@ def _fetch(url: str) -> str | None:
 
 def ingest_preprints(conn) -> int:
     ids = _lines(PREPRINTS)
-    written = 0
+    written = ingest_documents(conn)
     for arxiv_id in ids:
         time.sleep(ARXIV_DELAY)              # arXiv asks for 1 request / 3s
         raw = _fetch(f"{ARXIV_API}?id_list={arxiv_id}&max_results=1")
@@ -85,6 +123,48 @@ def ingest_preprints(conn) -> int:
         if db.upsert_source(conn, "preprint", f"arxiv:{arxiv_id}", title,
                             _sentences(abstract, 2), body):
             written += 1
+    return written
+
+
+def _pdf_text(url: str) -> str | None:
+    try:
+        r = requests.get(url, headers=UA, timeout=FETCH_TIMEOUT)
+        r.raise_for_status()
+        pages = PdfReader(io.BytesIO(r.content)).pages
+        return _unwrap("\n".join(p.extract_text() or "" for p in pages))
+    except Exception as exc:
+        log.warning("pdf failed %s: %s", url, exc)
+        return None
+
+
+def ingest_documents(conn) -> int:
+    """Papers and reports that are not on arXiv. Same pool as the preprints.
+
+    A TSV of url, title, teaser. The teaser is supplied rather than scraped:
+    a page's own summary is usually boilerplate about the publisher, and the
+    teaser is the only thing the shelf shows.
+    """
+    if not DOCUMENTS.exists():
+        return 0
+    written = 0
+    with DOCUMENTS.open(encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle, delimiter="\t"):
+            url = (row.get("url") or "").strip()
+            if not url or url.startswith("#"):
+                continue
+            if db.source_exists(conn, url):
+                continue
+            if url.lower().endswith(".pdf"):
+                body = _pdf_text(url)
+            else:
+                page = _fetch(url)
+                body = _text(page) if page else None
+            if not body:
+                continue
+            title = (row.get("title") or "").strip() or url
+            teaser = (row.get("teaser") or "").strip() or _sentences(body, 2)
+            if db.upsert_source(conn, "preprint", url, title, teaser[:500], body):
+                written += 1
     return written
 
 
@@ -131,8 +211,8 @@ def ingest_news(conn) -> int:
             continue
         for entry in feedparser.parse(raw).entries:
             link = entry.get("link") or entry.get("id")
-            if not link:
-                continue
+            if not link or db.source_exists(conn, link):
+                continue          # already stored; do not fetch the page again
             title = " ".join(entry.get("title", "untitled").split())
             summary = _text(entry.get("summary", ""))[:2000]
 

@@ -32,15 +32,21 @@ same name.
 
     cd writer
     pip install -r requirements.txt
-    python sources.py --pool creative
+    python sources.py --pool preprint
+    python sources.py --pool news
     python post.py
 
     cd reader
     npm install && npm run dev
 
-`feeds.txt`, `preprints.txt`, and `corpus/` ship empty; populate them before
-ingesting. `--pool news` runs hourly alongside `post.py`. The preprint and
-creative pools are one-off backfills.
+Three lists drive ingestion. `preprints.txt` holds arXiv IDs and
+`documents.txt` holds URLs for papers that are not on arXiv; both fill the
+preprint pool. `feeds.txt` holds RSS and Atom URLs. On every line, text after a
+trailing `#` is a comment and carries the title. `corpus/` holds plaintext for
+the creative pool and ships empty.
+
+`--pool news` runs hourly alongside `post.py` and skips entries already stored
+before fetching them. The preprint and creative pools are one-off backfills.
 
 ## Operation
 

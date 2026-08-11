@@ -1,2 +1,13 @@
 # One RSS or Atom feed URL per line. Blank lines and # comments are ignored.
-# Five to fifteen feeds with a deliberate slant work better than a wire service.
+# Discovered from the organisations in Gigascale-Labs/map.largeagentsystems.org
+# (data/map.csv) and validated by fetching and parsing each one.
+
+https://80000hours.org/feed/    # 80,000 Hours
+https://aiprospects.substack.com/feed    # AI Prospects
+https://axrp.net/feed    # AI X-risk Research Podcast (AXRP)
+https://aria.org.uk/rss    # ARIA (Advanced Research + Invention Agency)
+https://blog.bluedot.org/feed    # BlueDot Impact
+https://www.cip.org/blog?format=rss    # Collective Intelligence Project
+https://deepmind.google/blog/rss.xml    # Google DeepMind
+https://jack-clark.net/feed/    # Import AI
+https://www.schmidtsciences.org/feed/    # Schmidt Sciences

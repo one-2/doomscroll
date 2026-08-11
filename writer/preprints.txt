@@ -1,2 +1,36 @@
-# One arXiv ID per line, e.g. 2301.00001 or cond-mat/0703470.
-# A hand-picked list of ~50 papers outperforms a category firehose.
+# One arXiv ID per line. Blank lines and # comments are ignored.
+# Source: Gigascale-Labs/largeagentsystems.org, data/las-canon.csv
+
+2502.14143    # Multi-Agent Risks from Advanced AI
+2512.02682    # Beyond Single-Agent Safety: A Taxonomy of Risks in LLM-to-LLM Interactions
+2509.10147    # Virtual Agent Economies
+2509.01063    # An Economy of AI Agents
+2408.02784    # LLM economicus? Mapping the Behavioral Biases of LLMs via Utility Theory
+2602.16136    # Retrieval Collapses When AI Pollutes the Web
+2602.11865    # Intelligent AI Delegation
+2406.12137    # IDs for AI Systems
+2512.16856    # Distributional AGI Safety
+2409.02822    # AI agents can coordinate beyond human scale
+2503.13395    # Causal Emergence 2.0: Quantifying Emergent Complexity
+2605.24413    # Habermolt: Delegating Deliberation to AI Representatives
+2604.10290    # AI Organizations are More Effective but Less Aligned than Individual Agents
+2510.22422    # Group size effects and collective misalignment in LLM multi-agent systems
+2410.07283    # Prompt Infection: LLM-to-LLM Prompt Injection within Multi-Agent Systems
+2402.08567    # Agent Smith: A Single Image Can Jailbreak One Million Multimodal LLM Agents Exponentially Fast
+2404.16109    # zkLLM: Zero Knowledge Proofs for Large Language Models
+2508.16279    # AgentScope 1.0: A Developer-Centric Framework for Building Agentic Applications
+2409.10568    # On the Limits of Agency in Agent-Based Models
+2604.01151    # Detecting Multi-Agent Collusion Through Multi-Agent Interpretability
+2604.15236    # Agentic Microphysics: A Manifesto for Generative AI Safety
+2411.11581    # OASIS: Open Agent Social Interaction Simulations with One Million Agents
+2502.08691    # AgentSociety: Large-Scale Simulation of LLM-Driven Generative Agents Advances Understanding of Human Behaviors and Society
+2506.12078    # Modeling Earth-Scale Human-Like Societies with One Billion Agents
+2411.10109    # LLM Agents Grounded in Self-Reports Enable General-Purpose Simulation of Individuals
+2603.03140    # How to Model AI Agents as Personas?: Applying the Persona Ecosystem Playground to 41,300 Posts on Moltbook for Behavioral Insights
+2606.04592    # Synthetic Personalities: How Well Can LLMs Mimic Individual Respondents Using Socio-Economic Microdata?
+2505.17479    # Twin-2K-500: A dataset for building digital twins of over 2,000 people based on their answers to over 500 questions
+2605.13860    # The Moltbook Observatory Archive: an incremental dataset of agent-only social network activity
+2501.16946    # Gradual Disempowerment: Systemic Existential Risks from Incremental AI Development
+2604.04604    # AI Agents Under EU Law: A Compliance Architecture for AI Providers
+2603.23471    # Regulating AI Agents
+2211.03074    # A Survey on Influence Maximization: From an ML-Based Combinatorial Optimization
