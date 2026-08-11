@@ -241,16 +241,22 @@ def ingest_creative(conn, limit: int | None = None) -> int:
         if db.source_exists(conn, f"{url}#1"):
             continue
         time.sleep(CREATIVE_DELAY)
-        if url.lower().endswith(".pdf"):
-            text = _pdf_text(url)
-        else:
-            page = _fetch(url)
-            text = _text(page) if page else None
-        if not text or approx_tokens(text) < 100:
-            continue
-        written += _store_chunks(conn, url, title or url.rsplit("/", 1)[-1], text)
+        try:
+            if url.lower().endswith(".pdf"):
+                text = _pdf_text(url)
+            else:
+                page = _fetch(url)
+                text = _text(page) if page else None
+            if not text or approx_tokens(text) < 100:
+                continue
+            written += _store_chunks(conn, url, title or url.rsplit("/", 1)[-1], text)
+            conn.commit()          # per document, so a failure resumes exactly
+        except Exception:
+            # 312 documents from one archive vary more than any guard predicts.
+            # One bad file must not end the run.
+            log.exception("skipping %s", url)
+            conn.rollback()
         if n % 25 == 0:
-            conn.commit()
             log.info("  %d/%d documents, %d chunks", n, len(links), written)
     return written
 
