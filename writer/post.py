@@ -1,15 +1,17 @@
-"""One post per invocation.
+"""One post per invocation, for one feed.
 
-    day_index = (days since EPOCH_START) % 3
-    shelf     = random slate from that day's pool
-    context   = journal + uncompressed posts + shelf
+    shelf     = random slate from the feed's pools, empty for `nothing`
+    context   = the feed's journal + its uncompressed posts + shelf
     tool loop = read(item_id), at most MAX_READS times
     insert    = post, reads, last_read_at; then compress if due
+
+Feeds do not share memory. Each has its own journal, its own buffer and its
+own read history.
 """
 
+import argparse
 import logging
 import sys
-from datetime import date, datetime, timezone
 
 from anthropic import Anthropic
 
@@ -20,25 +22,22 @@ import shelf as shelf_mod
 from compress import maybe_compress
 from config import (
     BUFFER_MAX_TOK,
-    EPOCH_START,
+    FEEDS,
+    POST_HOURS,
     MAX_READS,
-    POOLS,
     POST_MAX_TOK,
     POST_MODEL,
     POST_TEMP,
     POST_THINKING,
+    ZONE,
     approx_tokens,
+    in_window,
     sampling,
     thinking,
 )
 from prompts import READ_TOOL, SYSTEM_POST, render_post_context
 
 log = logging.getLogger(__name__)
-
-
-def day_index(today: date | None = None) -> int:
-    today = today or datetime.now(timezone.utc).date()
-    return (today - EPOCH_START).days % 3
 
 
 def _handle_read(conn, block, offered: dict, reads: list) -> dict:
@@ -111,37 +110,45 @@ def generate(client: Anthropic, conn, journal, buffer, shelf):
 
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--feed", required=True, choices=sorted(FEEDS))
+    args = parser.parse_args()
+    feed = args.feed
+
+    if not in_window():
+        log.info("%s: outside %s in %s; nothing to do", feed, POST_HOURS, ZONE)
+        return 0
+
     if safety.killed():
         return 0
 
     client = llm.client()
-    index = day_index()
-    pool = POOLS[index]
 
     with db.connect() as conn:
-        shelf = shelf_mod.draw(conn, pool)
-        journal = db.latest_journal(conn)
-        buffer = db.buffer_posts(conn)
-        log.info("day %d (%s), shelf of %d, buffer of %d", index, pool, len(shelf), len(buffer))
-        if not shelf:
-            log.warning("the %s pool is empty; the entry will be written from "
-                        "memory alone. Run: sources.py --pool %s", pool, pool)
+        shelf = shelf_mod.draw(conn, feed)
+        journal = db.latest_journal(conn, feed)
+        buffer = db.buffer_posts(conn, feed)
+        log.info("%s: shelf of %d, buffer of %d", feed, len(shelf), len(buffer))
+        if not shelf and FEEDS[feed]:
+            log.warning("%s draws from %s and every one of them is empty; the "
+                        "entry will be written from memory alone",
+                        feed, ", ".join(FEEDS[feed]))
 
         text, reads = generate(client, conn, journal, buffer, shelf)
         if not text:
-            log.warning("empty response; no post this run")
+            log.warning("%s: empty response; no post this run", feed)
             return 0
         if not safety.allows(client, text):
             return 0
 
-        post_id = db.insert_post(conn, text, index, approx_tokens(text))
+        post_id = db.insert_post(conn, feed, text, approx_tokens(text))
         for position, source_id in enumerate(reads):
             db.insert_read(conn, post_id, source_id, shelf, position)
             db.mark_read(conn, source_id)
         conn.commit()
-        log.info("post %d written, %d read(s)", post_id, len(reads))
+        log.info("%s: post %d written, %d read(s)", feed, post_id, len(reads))
 
-        maybe_compress(client, conn)
+        maybe_compress(client, conn, feed)
     return 0
 
 

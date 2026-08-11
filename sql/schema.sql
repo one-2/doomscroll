@@ -3,6 +3,7 @@
 CREATE TABLE journals (
     id           SERIAL PRIMARY KEY,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    feed         TEXT NOT NULL,
     body         TEXT NOT NULL,
     token_count  INTEGER NOT NULL,
     covers_from  INTEGER,
@@ -12,12 +13,15 @@ CREATE TABLE journals (
 CREATE TABLE posts (
     id           SERIAL PRIMARY KEY,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    feed         TEXT NOT NULL,             -- nothing | news | creative | academic | mixed
     body         TEXT NOT NULL,
-    day_index    SMALLINT NOT NULL,          -- 0 preprint, 1 creative, 2 news
+    day_index    SMALLINT,                   -- unused; the rotation is gone
     token_count  INTEGER NOT NULL,
     journal_id   INTEGER REFERENCES journals(id)
 );
 CREATE INDEX posts_created_idx ON posts (created_at DESC);
+CREATE INDEX posts_feed_idx ON posts (feed, id DESC);
+CREATE INDEX journals_feed_idx ON journals (feed, id DESC);
 
 CREATE TABLE sources (
     id           SERIAL PRIMARY KEY,

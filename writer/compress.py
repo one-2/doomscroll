@@ -44,9 +44,9 @@ def due(journal, buffer) -> bool:
     return (datetime.now(timezone.utc) - oldest).days >= COMPRESS_DAYS
 
 
-def compress(client: Anthropic, conn) -> int | None:
-    journal = db.latest_journal(conn)
-    buffer = db.buffer_posts(conn)
+def compress(client: Anthropic, conn, feed: str) -> int | None:
+    journal = db.latest_journal(conn, feed)
+    buffer = db.buffer_posts(conn, feed)
     if not buffer:
         return None
 
@@ -69,32 +69,40 @@ def compress(client: Anthropic, conn) -> int | None:
     covers_from, covers_to = buffer[0]["id"], buffer[-1]["id"]
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO journals (body, token_count, covers_from, covers_to) "
-            "VALUES (%s, %s, %s, %s) RETURNING id",
-            (body, approx_tokens(body), covers_from, covers_to),
+            "INSERT INTO journals (feed, body, token_count, covers_from, covers_to) "
+            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (feed, db.clean(body), approx_tokens(body), covers_from, covers_to),
         )
         journal_id = cur.fetchone()["id"]
         cur.execute(
-            "UPDATE posts SET journal_id = %s WHERE journal_id IS NULL AND id <= %s",
-            (journal_id, covers_to),
+            "UPDATE posts SET journal_id = %s "
+            "WHERE feed = %s AND journal_id IS NULL AND id <= %s",
+            (journal_id, feed, covers_to),
         )
     conn.commit()
     log.info(
-        "journal %d written, %d tokens, covering posts %d-%d",
-        journal_id, approx_tokens(body), covers_from, covers_to,
+        "%s: journal %d written, %d tokens, covering posts %d-%d",
+        feed, journal_id, approx_tokens(body), covers_from, covers_to,
     )
     return journal_id
 
 
-def maybe_compress(client: Anthropic, conn) -> int | None:
-    journal = db.latest_journal(conn)
-    buffer = db.buffer_posts(conn)
+def maybe_compress(client: Anthropic, conn, feed: str) -> int | None:
+    journal = db.latest_journal(conn, feed)
+    buffer = db.buffer_posts(conn, feed)
     if not due(journal, buffer):
         return None
-    return compress(client, conn)
+    return compress(client, conn, feed)
 
 
 if __name__ == "__main__":
+    import argparse
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    from config import FEEDS
+
+    parser = argparse.ArgumentParser(description="Rewrite one feed's journal now.")
+    parser.add_argument("--feed", required=True, choices=sorted(FEEDS))
+    args = parser.parse_args()
     with db.connect() as conn:
-        compress(llm.client(), conn)
+        compress(llm.client(), conn, args.feed)

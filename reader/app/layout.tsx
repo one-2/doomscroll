@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Tabs from "./tabs";
 
 export const metadata: Metadata = {
   title: "Feed",
   description: "A text feed.",
-  alternates: {
-    types: { "application/rss+xml": [{ url: "/feed.xml", title: "Feed" }] },
-  },
 };
 
 export default function RootLayout({
@@ -17,14 +15,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <nav>
-          <a href="/">Feed</a>
-          <a href="/about">About</a>
-        </nav>
+        <Tabs />
         {children}
-        <footer>
-          <a href="/feed.xml">RSS</a>
-        </footer>
       </body>
     </html>
   );

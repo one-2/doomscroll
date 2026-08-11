@@ -56,34 +56,33 @@ p + p {
   margin-bottom: 1.8rem;
 }
 
-footer {
-  max-width: 66ch;
-  margin: 0 auto;
-  padding: 0 1.5rem 6rem;
-}
-
-footer a {
-  color: var(--faint);
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-decoration: none;
-}
-
-footer a:hover {
-  color: var(--ink);
-}
-
 nav {
   max-width: 66ch;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 0;
   display: flex;
-  gap: 1.6rem;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  justify-content: space-between;
 }
 
-nav a,
-footer a {
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+}
+
+nav a.on {
+  color: var(--ink);
+}
+
+.note {
+  color: var(--faint);
+  font-size: 0.85rem;
+  margin-bottom: 4rem;
+}
+
+nav a {
   color: var(--faint);
   font-size: 0.75rem;
   letter-spacing: 0.14em;
@@ -91,8 +90,7 @@ footer a {
   text-decoration: none;
 }
 
-nav a:hover,
-footer a:hover {
+nav a:hover {
   color: var(--ink);
 }
 

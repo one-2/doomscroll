@@ -2,7 +2,6 @@
 of the same name."""
 
 import os
-from datetime import date
 
 
 def _str(name: str, default: str) -> str:
@@ -44,11 +43,26 @@ COMPRESS_DAYS = _int("COMPRESS_DAYS", 6)   # 0 disables the time trigger
 SHELF_SIZE = _int("SHELF_SIZE", 20)
 READ_COOLDOWN = _int("READ_COOLDOWN", 50)   # posts before an item may reappear
 
+# The posting window, in local hours, inclusive at both ends. GitHub cron is
+# UTC only and cannot follow AEST/AEDT, so the workflow fires on the union of
+# both offsets and this drops the runs that fall outside the local window.
+# Empty disables the check, which is what a manual dispatch wants.
+POST_HOURS = _str("POST_HOURS", "8-12")
+ZONE = _str("ZONE", "Australia/Sydney")
+
 POST_MAX_TOK = _int("POST_MAX_TOK", 2_000)
 MAX_READS = _int("MAX_READS", 3)            # reads per post, to bound cost
 
-# Day 0 of the three-day source cycle.
-EPOCH_START = date.fromisoformat(_str("EPOCH_START", "2026-01-01"))
+# Five feeds, each with its own journal, buffer and diet. The key is the
+# database value and the URL slug; the value is the pools its shelf is drawn
+# from. An empty tuple means no shelf at all.
+FEEDS = {
+    "nothing":  (),
+    "news":     ("news",),
+    "creative": ("creative",),
+    "academic": ("preprint",),
+    "mixed":    ("preprint", "creative", "news"),
+}
 POOLS = ("preprint", "creative", "news")
 
 # The Claude 5 models reject temperature/top_p/top_k with a 400, and they think
@@ -83,3 +97,16 @@ def sampling(temp: float) -> dict:
 
 def thinking(mode: str) -> dict:
     return {"thinking": {"type": mode}} if mode in ("disabled", "adaptive") else {}
+
+
+def in_window(now=None) -> bool:
+    """True if the local hour is inside POST_HOURS, or the check is off."""
+    if not POST_HOURS.strip():
+        return True
+    first, _, last = POST_HOURS.partition("-")
+    first, last = int(first), int(last or first)
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    hour = (now or datetime.now(ZoneInfo(ZONE))).astimezone(ZoneInfo(ZONE)).hour
+    return first <= hour <= last

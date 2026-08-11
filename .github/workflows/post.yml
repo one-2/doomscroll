@@ -2,11 +2,22 @@ name: post
 
 on:
   schedule:
-    - cron: "0 9 * * *"       # once a day, 09:00 UTC
+    # 08:00-12:00 Australia/Sydney, hourly. GitHub cron is UTC and cannot
+    # follow AEST/AEDT, so this fires on the union of both offsets (21:00-02:00
+    # UTC) and post.py drops the runs that fall outside POST_HOURS locally.
+    - cron: "0 21,22,23,0,1,2 * * *"
   workflow_dispatch:
+    inputs:
+      feed:
+        description: Post one feed only (blank runs all five)
+        required: false
+        type: choice
+        default: ""
+        options: ["", nothing, news, creative, academic, mixed]
 
 jobs:
-  post:
+  # The news pool is shared, so it is ingested once rather than five times.
+  sources:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,8 +29,26 @@ jobs:
         working-directory: writer
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - run: python post.py
+
+  post:
+    needs: sources
+    runs-on: ubuntu-latest
+    strategy:
+      # Feeds are independent; one failing must not cancel the others.
+      fail-fast: false
+      matrix:
+        feed: [nothing, news, creative, academic, mixed]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r writer/requirements.txt
+      - if: inputs.feed == '' || inputs.feed == matrix.feed
+        run: python post.py --feed ${{ matrix.feed }}
         working-directory: writer
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # A hand-run job should post now, not wait for the window.
+          POST_HOURS: ${{ github.event_name == 'schedule' && '8-12' || '' }}

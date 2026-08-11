@@ -17,30 +17,33 @@ def connect():
         yield conn
 
 
-def latest_journal(conn):
+def latest_journal(conn, feed: str):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, created_at, body FROM journals ORDER BY id DESC LIMIT 1"
+            "SELECT id, created_at, body FROM journals "
+            "WHERE feed = %s ORDER BY id DESC LIMIT 1",
+            (feed,),
         )
         return cur.fetchone()
 
 
-def buffer_posts(conn):
-    """Posts not yet folded into a journal, oldest first."""
+def buffer_posts(conn, feed: str):
+    """This feed's posts not yet folded into its journal, oldest first."""
     with conn.cursor() as cur:
         cur.execute(
             "SELECT id, created_at, body, token_count FROM posts "
-            "WHERE journal_id IS NULL ORDER BY created_at, id"
+            "WHERE feed = %s AND journal_id IS NULL ORDER BY created_at, id",
+            (feed,),
         )
         return cur.fetchall()
 
 
-def insert_post(conn, body: str, day_index: int, token_count: int) -> int:
+def insert_post(conn, feed: str, body: str, token_count: int) -> int:
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO posts (body, day_index, token_count, journal_id) "
+            "INSERT INTO posts (feed, body, token_count, journal_id) "
             "VALUES (%s, %s, %s, NULL) RETURNING id",
-            (body, day_index, token_count),
+            (feed, clean(body), token_count),
         )
         return cur.fetchone()["id"]
 
