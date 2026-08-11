@@ -23,12 +23,15 @@ from compress import maybe_compress
 from config import (
     BUFFER_MAX_TOK,
     FEEDS,
+    POST_HOURS,
     MAX_READS,
     POST_MAX_TOK,
     POST_MODEL,
     POST_TEMP,
     POST_THINKING,
+    ZONE,
     approx_tokens,
+    in_window,
     sampling,
     thinking,
 )
@@ -111,6 +114,10 @@ def main() -> int:
     parser.add_argument("--feed", required=True, choices=sorted(FEEDS))
     args = parser.parse_args()
     feed = args.feed
+
+    if not in_window():
+        log.info("%s: outside %s in %s; nothing to do", feed, POST_HOURS, ZONE)
+        return 0
 
     if safety.killed():
         return 0
