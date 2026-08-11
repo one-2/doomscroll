@@ -1,6 +1,7 @@
 import { recent } from "@/lib/db";
 import { dayOf, timeOf } from "@/lib/time";
 import { feedOf, isFeed } from "@/lib/feeds";
+import { readTitle, tidy } from "@/lib/titles";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +35,14 @@ export async function GET(
   const site = origin(request);
 
   const items = posts.map((post) => {
-    // Mirrors the page: what was read sits with the timestamp, not in the item
-    // title, which readers show in list views where length costs something.
+    // What the post read is the item title: a reader's list view is otherwise
+    // ten rows of the same timestamp with nothing to tell them apart. Posts
+    // that read nothing fall back to the stamp, which is all `nothing` has.
+    const named = readTitle(post.reads);
+    const title = named || `${dayOf(post.created_at)} \u00b7 ${timeOf(post.created_at)}`;
     const read =
       post.reads?.length > 0
-        ? `<p><em>read ${escape(post.reads.join(" \u00b7 "))}</em></p>`
+        ? `<p><em>read ${escape(post.reads.map(tidy).join(" \u00b7 "))}</em></p>`
         : "";
     // No separate ]]> guard: escape() turns every > into &gt; first, so the
     // sequence cannot survive to close the section. Guarding beforehand would
@@ -48,7 +52,7 @@ export async function GET(
       .map((p) => `<p>${escape(p)}</p>`)
       .join("");
     return `    <item>
-      <title>${escape(`${dayOf(post.created_at)} · ${timeOf(post.created_at)}`)}</title>
+      <title>${escape(title)}</title>
       <link>${site}/${feed}#${post.id}</link>
       <guid isPermaLink="false">${site}/${feed}/post/${post.id}</guid>
       <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
