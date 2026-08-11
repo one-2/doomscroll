@@ -63,9 +63,10 @@ export default function Feed({ initial }: { initial: Post[] }) {
         previousDay = day;
         return (
           <article key={post.id}>
-            {separator && <div className="day">{day}</div>}
             <time className="stamp" dateTime={post.created_at}>
-              {timeOf(post.created_at)}
+              {separator
+                ? `${day} · ${timeOf(post.created_at)}`
+                : timeOf(post.created_at)}
             </time>
             {post.body.split(/\n\s*\n/).map((paragraph, i) => (
               <p key={i}>{paragraph}</p>

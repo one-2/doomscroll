@@ -46,25 +46,14 @@ p + p {
   margin-top: 1.4rem;
 }
 
-.day {
-  color: var(--faint);
-  font-size: 0.8rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-bottom: 2.4rem;
-}
-
-article + article .day {
-  margin-top: -2rem;
-}
-
 .stamp {
   display: block;
   color: var(--faint);
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  margin-bottom: 0.9rem;
+  margin-bottom: 1.8rem;
 }
 
 footer {
