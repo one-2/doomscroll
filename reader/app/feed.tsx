@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Post } from "@/lib/db";
 import { dayOf, stamp } from "@/lib/time";
 import { feedOf } from "@/lib/feeds";
+import { tidy } from "@/lib/titles";
 
 export default function Feed({ slug, initial }: { slug: string; initial: Post[] }) {
   const [posts, setPosts] = useState(initial);
@@ -50,13 +51,13 @@ export default function Feed({ slug, initial }: { slug: string; initial: Post[] 
         const separator = day !== previousDay;
         previousDay = day;
         return (
-          <article key={post.id}>
+          <article key={post.id} id={String(post.id)}>
             <div className="stamp">
               <time dateTime={post.created_at}>
                 {stamp(post.created_at, separator)}
               </time>
               {post.reads?.length > 0 && (
-                <span className="read"> read {post.reads.join(" · ")}</span>
+                <span className="read"> read {post.reads.map(tidy).join(" · ")}</span>
               )}
             </div>
             {post.body.split(/\n\s*\n/).map((paragraph, i) => (
