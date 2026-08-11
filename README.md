@@ -52,7 +52,8 @@ trailing `#` is a comment and carries the title. `corpus/` holds plaintext for
 the creative pool and ships empty.
 
 `--pool news` runs daily alongside `post.py` and skips entries already stored
-before fetching them. The preprint and creative pools are one-off backfills.
+before fetching them. The preprint and creative pools are one-off backfills:
+run them locally, or from the Actions tab with the `backfill` workflow.
 
 ## Operation
 
