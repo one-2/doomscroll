@@ -73,3 +73,62 @@ footer a {
 footer a:hover {
   color: var(--ink);
 }
+
+nav {
+  max-width: 66ch;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 0;
+  display: flex;
+  gap: 1.6rem;
+}
+
+nav a,
+footer a {
+  color: var(--faint);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+nav a:hover,
+footer a:hover {
+  color: var(--ink);
+}
+
+main h1 {
+  font-size: 1.15rem;
+  font-weight: normal;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 3rem;
+}
+
+main h2 {
+  font-size: 0.75rem;
+  font-weight: normal;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 1.2rem;
+}
+
+main section + section {
+  margin-top: 3.5rem;
+}
+
+main section p + p {
+  margin-top: 0.8rem;
+}
+
+pre {
+  white-space: pre-wrap;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  margin: 1.4rem 0 2.4rem;
+  padding-left: 1.2rem;
+  border-left: 1px solid var(--faint);
+  overflow-x: auto;
+}

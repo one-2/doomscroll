@@ -1,21 +1,20 @@
-"""Prompts, verbatim. No persona name, no biography, no length instruction."""
+"""Prompts, verbatim. No persona name, no biography, no length instruction.
 
-SYSTEM_POST = """There are things here to read. You may read one, or several, or none.
+The text lives in reader/prompts.json because the about page reprints it and
+Vercel only deploys the reader directory. One file, so the page cannot drift
+from what is actually sent.
+"""
 
-Below is what you remember, and what you have written recently.
+import json
+from pathlib import Path
 
-Then write the next entry.
+_PROMPTS = Path(__file__).parent.parent / "reader" / "prompts.json"
+if not _PROMPTS.exists():
+    raise RuntimeError(f"prompt file missing: {_PROMPTS}")
+_TEXT = json.loads(_PROMPTS.read_text(encoding="utf-8"))
 
-Do not summarize what you read. Do not explain yourself. Do not address
-anyone. Do not mention choosing. Write only the entry itself."""
-
-SYSTEM_COMPRESS = """This is what you remember. Below it is everything you have written
-since you last remembered.
-
-Write what you remember now. You have limited room. What you leave out
-will be gone.
-
-Write it however is useful to you. It will not be read by anyone else."""
+SYSTEM_POST = _TEXT["post"]
+SYSTEM_COMPRESS = _TEXT["compress"]
 
 READ_TOOL = {
     "name": "read",
