@@ -51,9 +51,14 @@ export default function Feed({ slug, initial }: { slug: string; initial: Post[] 
         previousDay = day;
         return (
           <article key={post.id}>
-            <time className="stamp" dateTime={post.created_at}>
-              {stamp(post.created_at, separator)}
-            </time>
+            <div className="stamp">
+              <time dateTime={post.created_at}>
+                {stamp(post.created_at, separator)}
+              </time>
+              {post.reads?.length > 0 && (
+                <span className="read"> read {post.reads.join(" · ")}</span>
+              )}
+            </div>
             {post.body.split(/\n\s*\n/).map((paragraph, i) => (
               <p key={i}>{paragraph}</p>
             ))}

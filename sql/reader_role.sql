@@ -15,7 +15,15 @@ GRANT CONNECT ON DATABASE neondb TO reader_ro;
 GRANT USAGE ON SCHEMA public TO reader_ro;
 GRANT SELECT ON posts TO reader_ro;
 
--- Verify, connected as reader_ro. The first must return; the rest must fail.
+-- The reader shows the titles of what each post read. Columns, not tables:
+-- sources.body is the corpus in full and the reader has no business with it.
+GRANT SELECT (id, title) ON sources TO reader_ro;
+GRANT SELECT (post_id, source_id, position) ON reads TO reader_ro;
+
+-- Verify, connected as reader_ro. The first three must return; the rest fail.
 --   SELECT id FROM posts LIMIT 1;
---   SELECT id FROM sources LIMIT 1;
---   INSERT INTO posts (body, day_index, token_count) VALUES ('x', 0, 1);
+--   SELECT id, title FROM sources LIMIT 1;
+--   SELECT post_id, source_id FROM reads LIMIT 1;
+--   SELECT body FROM sources LIMIT 1;
+--   SELECT shelf_json FROM reads LIMIT 1;
+--   INSERT INTO posts (feed, body, token_count) VALUES ('mixed', 'x', 1);

@@ -15,18 +15,28 @@ export type Post = {
   id: number;
   created_at: string;
   body: string;
+  /** Titles of what was read before writing, in the order read. Empty if nothing. */
+  reads: string[];
 };
 
 // Formatted in SQL so the value is an ISO string on both the server and the
 // client, and the day separator is computed from the same bytes in both.
-const CREATED = `to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`;
+const CREATED = `to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at`;
+
+// One row per post regardless of how many sources it read, so the aggregate is
+// a correlated subquery rather than a join that would multiply the posts.
+const READS = `COALESCE((SELECT array_agg(s.title ORDER BY r.position)
+                         FROM reads r JOIN sources s ON s.id = r.source_id
+                         WHERE r.post_id = p.id), '{}') AS reads`;
+
+const COLS = `p.id, ${CREATED}, p.body, ${READS}`;
 
 /** Newest first, for the RSS feed. */
 export async function recent(feed: string, limit = 50): Promise<Post[]> {
   const sql = connect();
-  const rows = await sql`SELECT id, ${sql.unsafe(CREATED)}, body FROM posts
-                         WHERE feed = ${feed}
-                         ORDER BY id DESC LIMIT ${limit}`;
+  const rows = await sql`SELECT ${sql.unsafe(COLS)} FROM posts p
+                         WHERE p.feed = ${feed}
+                         ORDER BY p.id DESC LIMIT ${limit}`;
   return rows as Post[];
 }
 
@@ -34,11 +44,11 @@ export async function recent(feed: string, limit = 50): Promise<Post[]> {
 export async function page(feed: string, cursor?: number): Promise<Post[]> {
   const sql = connect();
   const rows = cursor
-    ? await sql`SELECT id, ${sql.unsafe(CREATED)}, body FROM posts
-                WHERE feed = ${feed} AND id < ${cursor}
-                ORDER BY id DESC LIMIT ${PAGE_SIZE}`
-    : await sql`SELECT id, ${sql.unsafe(CREATED)}, body FROM posts
-                WHERE feed = ${feed}
-                ORDER BY id DESC LIMIT ${PAGE_SIZE}`;
+    ? await sql`SELECT ${sql.unsafe(COLS)} FROM posts p
+                WHERE p.feed = ${feed} AND p.id < ${cursor}
+                ORDER BY p.id DESC LIMIT ${PAGE_SIZE}`
+    : await sql`SELECT ${sql.unsafe(COLS)} FROM posts p
+                WHERE p.feed = ${feed}
+                ORDER BY p.id DESC LIMIT ${PAGE_SIZE}`;
   return rows as Post[];
 }
