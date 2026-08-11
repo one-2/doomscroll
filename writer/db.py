@@ -1,6 +1,7 @@
 """Postgres access. One connection per invocation."""
 
 import os
+import re
 from contextlib import contextmanager
 
 import psycopg
@@ -66,6 +67,16 @@ def source_body(conn, source_id: int):
         return cur.fetchone()
 
 
+# Postgres text fields reject NUL. PDF extraction produces them, and other C0
+# controls are noise in prose, so they are stripped at the one boundary every
+# pool passes through.
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def clean(text: str) -> str:
+    return _CONTROL.sub("", text)
+
+
 def source_exists(conn, ref: str) -> bool:
     with conn.cursor() as cur:
         cur.execute("SELECT 1 FROM sources WHERE ref = %s", (ref,))
@@ -78,6 +89,6 @@ def upsert_source(conn, pool: str, ref: str, title: str, teaser: str, body: str)
         cur.execute(
             "INSERT INTO sources (pool, ref, title, teaser, body) "
             "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (ref) DO NOTHING RETURNING id",
-            (pool, ref, title, teaser, body),
+            (pool, ref, clean(title), clean(teaser), clean(body)),
         )
         return cur.fetchone() is not None
