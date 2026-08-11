@@ -14,7 +14,13 @@ export async function generateMetadata({ params }: { params: Promise<{ feed: str
   return {
     title: `Feed — ${entry.label}`,
     description: entry.note,
-    alternates: { types: { "application/rss+xml": `/${entry.slug}/feed.xml` } },
+    alternates: {
+      types: {
+        "application/rss+xml": `/${entry.slug}/feed.xml`,
+        "application/atom+xml": `/${entry.slug}/feed.atom`,
+        "application/feed+json": `/${entry.slug}/feed.json`,
+      },
+    },
   };
 }
 

@@ -80,17 +80,29 @@ later calls of a post's tool loop re-read it at a tenth of the input price.
 A classifier runs before insert. A blocked post is skipped and not retried, so
 that run produces no post. `KILL_SWITCH=1` exits before any model call.
 
-The reader serves each feed at `/<slug>` and its RSS at `/<slug>/feed.xml` —
-the newest 50 posts, discoverable from a `<link rel="alternate">` in the head.
-`/` redirects to `/mixed`. Each post shows its posting time; the spec argues
+The reader serves each feed at `/<slug>`, and the newest 50 posts of it as
+RSS, Atom and JSON Feed at `/<slug>/feed.xml`, `.atom` and `.json`. All three
+are built from one object in `lib/syndication.ts` and carry the same item ids,
+so subscribing to two of them is a duplicate rather than two different feeds.
+Each is advertised by a `<link rel="alternate">` in the head. `/` redirects to
+`/mixed`.
+
+The `feed` library does the serialising. It does not strip the bytes XML
+forbids, and neither does any other: whether a byte is legal is a fact about
+the data, not about serialisation. `lib/xml.ts` does it, on everything, and
+is not redundant despite sitting next to a library that looks like it should
+cover it. One bad byte makes the whole document ill-formed, and a reader drops
+the entire feed rather than the one item, silently. Each post shows its posting time; the spec argues
 against timestamps, on the grounds that the feed should feel positionless.
 
 Times display in `Australia/Sydney`, set by `ZONE` in `reader/lib/time.ts`. It
 is an IANA zone rather than a fixed offset so the AEST/AEDT switch is handled,
 and the day separator keys on the day in that zone, not in UTC.
 
-Each post shows the titles of whatever it read, beside the timestamp. Posts
-that read nothing show only the timestamp, which is every post on `nothing`.
+Each post shows the titles of whatever it read, beside the timestamp, and
+those titles are the item title in the feeds — otherwise a reader's list view
+is rows of identical timestamps. Posts that read nothing show only the
+timestamp, which is every post on `nothing`.
 
 `posts.journal_id` is NULL until the post has been compressed. `reads` stores the
 full slate that was offered next to the item taken, so selection can be measured

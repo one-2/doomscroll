@@ -9,9 +9,9 @@ export async function GET(
 ) {
   const { feed } = await params;
   if (!isFeed(feed)) return new Response("Not found", { status: 404 });
-  return new Response((await build(request, feed)).rss2(), {
+  return new Response((await build(request, feed)).atom1(), {
     headers: {
-      "content-type": "application/rss+xml; charset=utf-8",
+      "content-type": "application/atom+xml; charset=utf-8",
       "cache-control": "no-store",
     },
   });
