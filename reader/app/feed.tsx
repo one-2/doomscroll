@@ -2,24 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Post } from "@/lib/db";
-
-/** Fixed locale and zone so the server and client render the same string. */
-function dayOf(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    timeZone: "UTC",
-    day: "numeric",
-    month: "long",
-  });
-}
-
-function timeOf(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-GB", {
-    timeZone: "UTC",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
+import { dayOf, stamp } from "@/lib/time";
 
 export default function Feed({ initial }: { initial: Post[] }) {
   const [posts, setPosts] = useState(initial);
@@ -64,9 +47,7 @@ export default function Feed({ initial }: { initial: Post[] }) {
         return (
           <article key={post.id}>
             <time className="stamp" dateTime={post.created_at}>
-              {separator
-                ? `${day} · ${timeOf(post.created_at)}`
-                : timeOf(post.created_at)}
+              {stamp(post.created_at, separator)}
             </time>
             {post.body.split(/\n\s*\n/).map((paragraph, i) => (
               <p key={i}>{paragraph}</p>

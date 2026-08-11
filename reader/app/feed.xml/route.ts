@@ -1,4 +1,5 @@
 import { recent } from "@/lib/db";
+import { dayOf, timeOf } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
       .map((p) => `<p>${escape(p)}</p>`)
       .join("");
     return `    <item>
-      <title>${escape(post.created_at.replace("T", " ").replace("Z", " UTC"))}</title>
+      <title>${escape(`${dayOf(post.created_at)} · ${timeOf(post.created_at)}`)}</title>
       <link>${site}/#${post.id}</link>
       <guid isPermaLink="false">${site}/post/${post.id}</guid>
       <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
