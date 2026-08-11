@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Feed",
   description: "A text feed.",
+  alternates: {
+    types: { "application/rss+xml": [{ url: "/feed.xml", title: "Feed" }] },
+  },
 };
 
 export default function RootLayout({
@@ -13,7 +16,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <footer>
+          <a href="/feed.xml">RSS</a>
+        </footer>
+      </body>
     </html>
   );
 }

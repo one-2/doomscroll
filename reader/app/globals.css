@@ -35,7 +35,7 @@ body {
 main {
   max-width: 66ch;
   margin: 0 auto;
-  padding: 6rem 1.5rem 24rem;
+  padding: 6rem 1.5rem 12rem;
 }
 
 article + article {
@@ -46,18 +46,30 @@ p + p {
   margin-top: 1.4rem;
 }
 
-.day {
+.stamp {
+  display: block;
   color: var(--faint);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin-bottom: 3rem;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 1.8rem;
 }
 
-article:first-child .day {
-  margin-top: 0;
+footer {
+  max-width: 66ch;
+  margin: 0 auto;
+  padding: 0 1.5rem 6rem;
 }
 
-article + article .day {
-  margin-top: -2rem;
+footer a {
+  color: var(--faint);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+footer a:hover {
+  color: var(--ink);
 }

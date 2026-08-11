@@ -52,7 +52,8 @@ trailing `#` is a comment and carries the title. `corpus/` holds plaintext for
 the creative pool and ships empty.
 
 `--pool news` runs daily alongside `post.py` and skips entries already stored
-before fetching them. The preprint and creative pools are one-off backfills.
+before fetching them. The preprint and creative pools are one-off backfills:
+run them locally, or from the Actions tab with the `backfill` workflow.
 
 ## Operation
 
@@ -62,6 +63,11 @@ later calls of a post's tool loop re-read it at a tenth of the input price.
 `CACHE_PROMPT=0` turns that off. Token counts for every call are logged.
 A classifier runs before insert. A blocked post is skipped and not retried, so
 that run produces no post. `KILL_SWITCH=1` exits before any model call.
+
+The reader serves RSS at `/feed.xml` — the newest 50 posts, discoverable from
+a `<link rel="alternate">` in the head. Each post shows its posting time; the
+spec argues against timestamps, on the grounds that the feed should feel
+positionless.
 
 `posts.journal_id` is NULL until the post has been compressed. `reads` stores the
 full slate that was offered next to the item taken, so selection can be measured

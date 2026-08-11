@@ -12,6 +12,15 @@ function dayOf(iso: string): string {
   });
 }
 
+function timeOf(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export default function Feed({ initial }: { initial: Post[] }) {
   const [posts, setPosts] = useState(initial);
   const [done, setDone] = useState(initial.length === 0);
@@ -54,7 +63,11 @@ export default function Feed({ initial }: { initial: Post[] }) {
         previousDay = day;
         return (
           <article key={post.id}>
-            {separator && <div className="day">{day}</div>}
+            <time className="stamp" dateTime={post.created_at}>
+              {separator
+                ? `${day} · ${timeOf(post.created_at)}`
+                : timeOf(post.created_at)}
+            </time>
             {post.body.split(/\n\s*\n/).map((paragraph, i) => (
               <p key={i}>{paragraph}</p>
             ))}
