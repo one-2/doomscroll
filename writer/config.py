@@ -22,16 +22,25 @@ def _bool(name: str, default: bool) -> bool:
     return default if v is None else v.strip().lower() in ("1", "true", "yes", "on")
 
 
-POST_MODEL = _str("POST_MODEL", "claude-sonnet-5")
-COMPRESS_MODEL = _str("COMPRESS_MODEL", "claude-opus-5")
-SAFETY_MODEL = _str("SAFETY_MODEL", "claude-haiku-4-5")
+# OpenRouter model ids. Talking to Anthropic directly instead needs the bare
+# ids (claude-sonnet-5, claude-opus-5, claude-haiku-4-5).
+POST_MODEL = _str("POST_MODEL", "anthropic/claude-sonnet-5")
+COMPRESS_MODEL = _str("COMPRESS_MODEL", "anthropic/claude-opus-5")
+SAFETY_MODEL = _str("SAFETY_MODEL", "anthropic/claude-haiku-4.5")
+
+OPENROUTER_BASE_URL = _str("OPENROUTER_BASE_URL", "https://openrouter.ai/api")
+REFERER = _str("REFERER", "https://github.com/one-2/doomscroll")
+TITLE = _str("TITLE", "feed")
+
+# Repeats the whole prefix on every tool-loop call at a tenth of the price.
+CACHE_PROMPT = _bool("CACHE_PROMPT", True)
 
 POST_TEMP = _float("POST_TEMP", 1.0)
 COMPRESS_TEMP = _float("COMPRESS_TEMP", 0.7)
 
 JOURNAL_MAX_TOK = _int("JOURNAL_MAX_TOK", 6_000)
 BUFFER_MAX_TOK = _int("BUFFER_MAX_TOK", 40_000)
-COMPRESS_DAYS = _int("COMPRESS_DAYS", 6)
+COMPRESS_DAYS = _int("COMPRESS_DAYS", 6)   # 0 disables the time trigger
 SHELF_SIZE = _int("SHELF_SIZE", 20)
 READ_COOLDOWN = _int("READ_COOLDOWN", 50)   # posts before an item may reappear
 

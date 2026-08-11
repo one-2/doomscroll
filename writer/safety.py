@@ -1,6 +1,6 @@
 """One cheap classifier pass before insert, and a kill switch.
 
-A blocked post means the hour passes empty. Nothing is retried.
+A blocked post means the run produces nothing. Nothing is retried.
 """
 
 import logging
