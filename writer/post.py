@@ -123,6 +123,9 @@ def main() -> int:
         journal = db.latest_journal(conn)
         buffer = db.buffer_posts(conn)
         log.info("day %d (%s), shelf of %d, buffer of %d", index, pool, len(shelf), len(buffer))
+        if not shelf:
+            log.warning("the %s pool is empty; the entry will be written from "
+                        "memory alone. Run: sources.py --pool %s", pool, pool)
 
         text, reads = generate(client, conn, journal, buffer, shelf)
         if not text:
