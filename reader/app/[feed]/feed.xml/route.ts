@@ -1,7 +1,9 @@
+import { Feed } from "feed";
 import { recent } from "@/lib/db";
 import { dayOf, timeOf } from "@/lib/time";
 import { feedOf, isFeed } from "@/lib/feeds";
 import { readTitle, tidy } from "@/lib/titles";
+import { safe } from "@/lib/xml";
 
 export const dynamic = "force-dynamic";
 
@@ -20,18 +22,11 @@ function origin(request: Request): string {
   return host ? `${proto}://${host}` : "";
 }
 
-// Characters XML 1.0 forbids outright, plus unpaired surrogates. One of these
-// anywhere in the document makes it not well-formed, and a reader drops the
-// whole feed rather than the one item — so this runs on everything, including
-// text bound for a CDATA section. CDATA hides markup, not illegal bytes.
-const ILLEGAL =
-  // eslint-disable-next-line no-control-regex
-  /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
-
-const safe = (s: string) => s.replace(ILLEGAL, "");
-
-const escape = (s: string) =>
-  safe(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const paragraphs = (text: string) =>
+  safe(text)
+    .split(/\n\s*\n/)
+    .map((p) => `<p>${p}</p>`)
+    .join("");
 
 export async function GET(
   request: Request,
@@ -42,51 +37,42 @@ export async function GET(
 
   const entry = feedOf(feed)!;
   const posts = await recent(feed, 50);
-  // Derived from the Host header, so it is caller-controlled in principle.
-  // Vercel only routes configured domains here, but the escaping costs nothing.
-  const site = escape(origin(request));
+  const site = origin(request);
 
-  const items = posts.map((post) => {
-    // What the post read is the item title: a reader's list view is otherwise
-    // ten rows of the same timestamp with nothing to tell them apart. Posts
-    // that read nothing fall back to the stamp, which is all `nothing` has.
-    const named = readTitle(post.reads);
-    const title = named || `${dayOf(post.created_at)} \u00b7 ${timeOf(post.created_at)}`;
-    const read =
-      post.reads?.length > 0
-        ? `<p><em>read ${escape(post.reads.map(tidy).join(" \u00b7 "))}</em></p>`
-        : "";
-    // No separate ]]> guard: escape() turns every > into &gt; first, so the
-    // sequence cannot survive to close the section. Guarding beforehand would
-    // only get its own & escaped, and the post would show a literal ]]&gt;.
-    const paragraphs = safe(post.body)
-      .split(/\n\s*\n/)
-      .map((p) => `<p>${escape(p)}</p>`)
-      .join("");
-    return `    <item>
-      <title>${escape(title)}</title>
-      <link>${site}/${feed}#${post.id}</link>
-      <guid isPermaLink="false">${site}/${feed}/post/${post.id}</guid>
-      <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
-      <description><![CDATA[${read}${paragraphs}]]></description>
-    </item>`;
+  const rss = new Feed({
+    title: `Feed — ${entry.label}`,
+    description: entry.note,
+    id: `${site}/${feed}`,
+    link: `${site}/${feed}`,
+    language: "en",
+    copyright: "",
+    updated: posts.length > 0 ? new Date(posts[0].created_at) : undefined,
+    feedLinks: { rss: `${site}/${feed}/feed.xml` },
   });
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Feed — ${escape(entry.label)}</title>
-    <link>${site}/${feed}</link>
-    <atom:link href="${site}/${feed}/feed.xml" rel="self" type="application/rss+xml"/>
-    <description>${escape(entry.note)}</description>
-    <language>en</language>
-${posts.length > 0 ? `    <lastBuildDate>${new Date(posts[0].created_at).toUTCString()}</lastBuildDate>` : ""}
-${items.join("\n")}
-  </channel>
-</rss>
-`;
+  for (const post of posts) {
+    // What the post read is the item title: a reader's list view is otherwise
+    // rows of the same timestamp with nothing to tell them apart. Posts that
+    // read nothing fall back to the stamp, which is all `nothing` has.
+    const named = readTitle(post.reads);
+    const read =
+      post.reads?.length > 0
+        ? `<p><em>read ${safe(post.reads.map(tidy).join(" · "))}</em></p>`
+        : "";
+    rss.addItem({
+      title: safe(
+        named || `${dayOf(post.created_at)} · ${timeOf(post.created_at)}`,
+      ),
+      // Unchanged from the hand-written serialiser: `id` becomes the guid, so
+      // existing subscribers do not see fifty posts arrive a second time.
+      id: `${site}/${feed}/post/${post.id}`,
+      link: `${site}/${feed}#${post.id}`,
+      date: new Date(post.created_at),
+      description: read + paragraphs(post.body),
+    });
+  }
 
-  return new Response(xml, {
+  return new Response(rss.rss2(), {
     headers: {
       "content-type": "application/rss+xml; charset=utf-8",
       "cache-control": "no-store",
