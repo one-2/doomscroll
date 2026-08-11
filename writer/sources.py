@@ -105,26 +105,34 @@ def ingest_preprints(conn) -> int:
     ids = _lines(PREPRINTS)
     written = ingest_documents(conn)
     for arxiv_id in ids:
+        if db.source_exists(conn, f"arxiv:{arxiv_id}"):
+            continue
         time.sleep(ARXIV_DELAY)              # arXiv asks for 1 request / 3s
-        raw = _fetch(f"{ARXIV_API}?id_list={arxiv_id}&max_results=1")
-        if raw is None:
-            continue
-        entries = feedparser.parse(raw).entries
-        if not entries:
-            log.warning("no entry for %s", arxiv_id)
-            continue
-        entry = entries[0]
-        title = " ".join(entry.title.split())
-        abstract = " ".join(entry.summary.split())
+        try:
+            raw = _fetch(f"{ARXIV_API}?id_list={arxiv_id}&max_results=1")
+            if raw is None:
+                continue
+            entries = feedparser.parse(raw).entries
+            if not entries:
+                log.warning("no entry for %s", arxiv_id)
+                continue
+            entry = entries[0]
+            title = " ".join(entry.title.split())
+            abstract = " ".join(entry.summary.split())
 
-        body = abstract
-        full = _fetch(f"https://export.arxiv.org/html/{arxiv_id}")
-        if full:
-            body = f"{abstract}\n\n{_text(full)}"
+            body = abstract
+            full = _fetch(f"https://export.arxiv.org/html/{arxiv_id}")
+            if full:
+                body = f"{abstract}\n\n{_text(full)}"
 
-        if db.upsert_source(conn, "preprint", f"arxiv:{arxiv_id}", title,
-                            _sentences(abstract, 2), body):
-            written += 1
+            if db.upsert_source(conn, "preprint", f"arxiv:{arxiv_id}", title,
+                                _sentences(abstract, 2), body):
+                written += 1
+            conn.commit()
+        except Exception:
+            log.exception("skipping arxiv:%s", arxiv_id)
+            conn.rollback()
+    log.info("preprint: %d source(s) after this run", written)
     return written
 
 
@@ -156,17 +164,22 @@ def ingest_documents(conn) -> int:
                 continue
             if db.source_exists(conn, url):
                 continue
-            if url.lower().endswith(".pdf"):
-                body = _pdf_text(url)
-            else:
-                page = _fetch(url)
-                body = _text(page) if page else None
-            if not body:
-                continue
-            title = (row.get("title") or "").strip() or url
-            teaser = (row.get("teaser") or "").strip() or _sentences(body, 2)
-            if db.upsert_source(conn, "preprint", url, title, teaser[:500], body):
-                written += 1
+            try:
+                if url.lower().endswith(".pdf"):
+                    body = _pdf_text(url)
+                else:
+                    page = _fetch(url)
+                    body = _text(page) if page else None
+                if not body:
+                    continue
+                title = (row.get("title") or "").strip() or url
+                teaser = (row.get("teaser") or "").strip() or _sentences(body, 2)
+                if db.upsert_source(conn, "preprint", url, title, teaser[:500], body):
+                    written += 1
+                conn.commit()
+            except Exception:
+                log.exception("skipping %s", url)
+                conn.rollback()
     return written
 
 
@@ -273,19 +286,24 @@ def ingest_news(conn) -> int:
             link = entry.get("link") or entry.get("id")
             if not link or db.source_exists(conn, link):
                 continue          # already stored; do not fetch the page again
-            title = " ".join(entry.get("title", "untitled").split())
-            summary = _text(entry.get("summary", ""))[:2000]
+            try:
+                title = " ".join(entry.get("title", "untitled").split())
+                summary = _text(entry.get("summary", ""))[:2000]
 
-            body = summary
-            page = _fetch(link)
-            if page:
-                body = f"{summary}\n\n{_text(page)}" if summary else _text(page)
-            if not body.strip():
-                continue
+                body = summary
+                page = _fetch(link)
+                if page:
+                    body = f"{summary}\n\n{_text(page)}" if summary else _text(page)
+                if not body.strip():
+                    continue
 
-            if db.upsert_source(conn, "news", link, title,
-                                _sentences(summary, 2) or title, body):
-                written += 1
+                if db.upsert_source(conn, "news", link, title,
+                                    _sentences(summary, 2) or title, body):
+                    written += 1
+                conn.commit()
+            except Exception:
+                log.exception("skipping %s", link)
+                conn.rollback()
     return written
 
 
