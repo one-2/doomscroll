@@ -34,6 +34,7 @@ same name.
 ## Setup
 
     psql "$DATABASE_URL" -f sql/schema.sql
+    psql "$DATABASE_URL" -f sql/reader_role.sql   # after creating the role
 
     cd writer
     pip install -r requirements.txt
