@@ -2,7 +2,6 @@
 of the same name."""
 
 import os
-from datetime import date
 
 
 def _str(name: str, default: str) -> str:
@@ -47,8 +46,16 @@ READ_COOLDOWN = _int("READ_COOLDOWN", 50)   # posts before an item may reappear
 POST_MAX_TOK = _int("POST_MAX_TOK", 2_000)
 MAX_READS = _int("MAX_READS", 3)            # reads per post, to bound cost
 
-# Day 0 of the three-day source cycle.
-EPOCH_START = date.fromisoformat(_str("EPOCH_START", "2026-01-01"))
+# Five feeds, each with its own journal, buffer and diet. The key is the
+# database value and the URL slug; the value is the pools its shelf is drawn
+# from. An empty tuple means no shelf at all.
+FEEDS = {
+    "nothing":  (),
+    "news":     ("news",),
+    "creative": ("creative",),
+    "academic": ("preprint",),
+    "mixed":    ("preprint", "creative", "news"),
+}
 POOLS = ("preprint", "creative", "news")
 
 # The Claude 5 models reject temperature/top_p/top_k with a 400, and they think

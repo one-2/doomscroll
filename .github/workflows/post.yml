@@ -2,11 +2,21 @@ name: post
 
 on:
   schedule:
-    - cron: "0 9 * * *"       # once a day, 09:00 UTC
+    # Once a day. "0,30 * * * *" is half-hourly, which is 48x the model spend;
+    # see the cost note in the README before changing it.
+    - cron: "0 9 * * *"
   workflow_dispatch:
+    inputs:
+      feed:
+        description: Post one feed only (blank runs all five)
+        required: false
+        type: choice
+        default: ""
+        options: ["", nothing, news, creative, academic, mixed]
 
 jobs:
-  post:
+  # The news pool is shared, so it is ingested once rather than five times.
+  sources:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +28,23 @@ jobs:
         working-directory: writer
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - run: python post.py
+
+  post:
+    needs: sources
+    runs-on: ubuntu-latest
+    strategy:
+      # Feeds are independent; one failing must not cancel the others.
+      fail-fast: false
+      matrix:
+        feed: [nothing, news, creative, academic, mixed]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r writer/requirements.txt
+      - if: inputs.feed == '' || inputs.feed == matrix.feed
+        run: python post.py --feed ${{ matrix.feed }}
         working-directory: writer
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

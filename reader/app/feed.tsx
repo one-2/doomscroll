@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Post } from "@/lib/db";
 import { dayOf, stamp } from "@/lib/time";
+import { feedOf } from "@/lib/feeds";
 
-export default function Feed({ initial }: { initial: Post[] }) {
+export default function Feed({ slug, initial }: { slug: string; initial: Post[] }) {
   const [posts, setPosts] = useState(initial);
   const [done, setDone] = useState(initial.length === 0);
   const loading = useRef(false);
@@ -15,7 +16,7 @@ export default function Feed({ initial }: { initial: Post[] }) {
     loading.current = true;
     try {
       const cursor = posts[posts.length - 1]?.id;
-      const response = await fetch(`/api/feed?cursor=${cursor}`);
+      const response = await fetch(`/api/feed?feed=${slug}&cursor=${cursor}`);
       if (!response.ok) return;
       const { posts: next } = (await response.json()) as { posts: Post[] };
       if (next.length === 0) setDone(true);
@@ -23,7 +24,7 @@ export default function Feed({ initial }: { initial: Post[] }) {
     } finally {
       loading.current = false;
     }
-  }, [posts, done]);
+  }, [posts, done, slug]);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -38,8 +39,12 @@ export default function Feed({ initial }: { initial: Post[] }) {
 
   let previousDay: string | null = null;
 
+  const entry = feedOf(slug);
+
   return (
     <main>
+      {entry && <p className="note">{entry.note}</p>}
+      {posts.length === 0 && <p className="note">Nothing here yet.</p>}
       {posts.map((post) => {
         const day = dayOf(post.created_at);
         const separator = day !== previousDay;

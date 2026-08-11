@@ -1,9 +1,6 @@
-import Feed from "./feed";
-import { page } from "@/lib/db";
+import { redirect } from "next/navigation";
+import { DEFAULT_FEED } from "@/lib/feeds";
 
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  const posts = await page();
-  return <Feed initial={posts} />;
+export default function Home() {
+  redirect(`/${DEFAULT_FEED}`);
 }
