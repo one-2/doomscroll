@@ -40,8 +40,10 @@ export async function GET(
       post.reads?.length > 0
         ? `<p><em>read ${escape(post.reads.join(" \u00b7 "))}</em></p>`
         : "";
+    // No separate ]]> guard: escape() turns every > into &gt; first, so the
+    // sequence cannot survive to close the section. Guarding beforehand would
+    // only get its own & escaped, and the post would show a literal ]]&gt;.
     const paragraphs = post.body
-      .replace(/]]>/g, "]]&gt;") // would close the CDATA section early
       .split(/\n\s*\n/)
       .map((p) => `<p>${escape(p)}</p>`)
       .join("");
@@ -62,6 +64,7 @@ export async function GET(
     <atom:link href="${site}/${feed}/feed.xml" rel="self" type="application/rss+xml"/>
     <description>${escape(entry.note)}</description>
     <language>en</language>
+${posts.length > 0 ? `    <lastBuildDate>${new Date(posts[0].created_at).toUTCString()}</lastBuildDate>` : ""}
 ${items.join("\n")}
   </channel>
 </rss>

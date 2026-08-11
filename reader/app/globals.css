@@ -42,6 +42,12 @@ article + article {
   margin-top: 7rem;
 }
 
+/* RSS items link to /<feed>#<id>. Without this the post lands flush against
+   the top of the viewport, under nothing, and reads as the start of the feed. */
+article {
+  scroll-margin-top: 4rem;
+}
+
 p + p {
   margin-top: 1.4rem;
 }

@@ -50,7 +50,7 @@ export default function Feed({ slug, initial }: { slug: string; initial: Post[] 
         const separator = day !== previousDay;
         previousDay = day;
         return (
-          <article key={post.id}>
+          <article key={post.id} id={String(post.id)}>
             <div className="stamp">
               <time dateTime={post.created_at}>
                 {stamp(post.created_at, separator)}
