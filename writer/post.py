@@ -14,6 +14,7 @@ from datetime import date, datetime, timezone
 from anthropic import Anthropic
 
 import db
+import llm
 import safety
 import shelf as shelf_mod
 from compress import maybe_compress
@@ -87,9 +88,11 @@ def generate(client: Anthropic, conn, journal, buffer, shelf):
             system=SYSTEM_POST,
             messages=messages,
             tools=[READ_TOOL],
+            **llm.caching(),
             **sampling(POST_TEMP),
             **thinking(POST_THINKING),
         )
+        llm.log_usage("post", response)
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason != "tool_use":
@@ -111,7 +114,7 @@ def main() -> int:
     if safety.killed():
         return 0
 
-    client = Anthropic()
+    client = llm.client()
     index = day_index()
     pool = POOLS[index]
 
@@ -123,7 +126,7 @@ def main() -> int:
 
         text, reads = generate(client, conn, journal, buffer, shelf)
         if not text:
-            log.warning("empty response; the hour passes")
+            log.warning("empty response; no post this run")
             return 0
         if not safety.allows(client, text):
             return 0

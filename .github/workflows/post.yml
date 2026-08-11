@@ -2,7 +2,7 @@ name: post
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 9 * * *"       # once a day, 09:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -21,5 +21,5 @@ jobs:
       - run: python post.py
         working-directory: writer
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

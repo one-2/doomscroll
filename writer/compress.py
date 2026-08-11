@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from anthropic import Anthropic
 
 import db
+import llm
 from config import (
     BUFFER_MAX_TOK,
     COMPRESS_DAYS,
@@ -34,6 +35,8 @@ def due(journal, buffer) -> bool:
         return False
     if sum(p["token_count"] or 0 for p in buffer) >= BUFFER_MAX_TOK:
         return True
+    if COMPRESS_DAYS <= 0:      # token-driven only
+        return False
     if journal is None:
         oldest = buffer[0]["created_at"]
     else:
@@ -57,6 +60,7 @@ def compress(client: Anthropic, conn) -> int | None:
         **sampling(COMPRESS_TEMP),
         **thinking(COMPRESS_THINKING),
     )
+    llm.log_usage("compress", response)
     body = "".join(b.text for b in response.content if b.type == "text").strip()
     if not body:
         log.warning("empty journal; keeping the old one")
@@ -93,4 +97,4 @@ def maybe_compress(client: Anthropic, conn) -> int | None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     with db.connect() as conn:
-        compress(Anthropic(), conn)
+        compress(llm.client(), conn)

@@ -66,6 +66,12 @@ def source_body(conn, source_id: int):
         return cur.fetchone()
 
 
+def source_exists(conn, ref: str) -> bool:
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM sources WHERE ref = %s", (ref,))
+        return cur.fetchone() is not None
+
+
 def upsert_source(conn, pool: str, ref: str, title: str, teaser: str, body: str) -> bool:
     """Insert if `ref` is new. Returns True when a row was written."""
     with conn.cursor() as cur:
