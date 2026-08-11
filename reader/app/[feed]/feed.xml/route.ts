@@ -20,8 +20,18 @@ function origin(request: Request): string {
   return host ? `${proto}://${host}` : "";
 }
 
+// Characters XML 1.0 forbids outright, plus unpaired surrogates. One of these
+// anywhere in the document makes it not well-formed, and a reader drops the
+// whole feed rather than the one item — so this runs on everything, including
+// text bound for a CDATA section. CDATA hides markup, not illegal bytes.
+const ILLEGAL =
+  // eslint-disable-next-line no-control-regex
+  /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
+const safe = (s: string) => s.replace(ILLEGAL, "");
+
 const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  safe(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export async function GET(
   request: Request,
@@ -32,7 +42,9 @@ export async function GET(
 
   const entry = feedOf(feed)!;
   const posts = await recent(feed, 50);
-  const site = origin(request);
+  // Derived from the Host header, so it is caller-controlled in principle.
+  // Vercel only routes configured domains here, but the escaping costs nothing.
+  const site = escape(origin(request));
 
   const items = posts.map((post) => {
     // What the post read is the item title: a reader's list view is otherwise
@@ -47,7 +59,7 @@ export async function GET(
     // No separate ]]> guard: escape() turns every > into &gt; first, so the
     // sequence cannot survive to close the section. Guarding beforehand would
     // only get its own & escaped, and the post would show a literal ]]&gt;.
-    const paragraphs = post.body
+    const paragraphs = safe(post.body)
       .split(/\n\s*\n/)
       .map((p) => `<p>${escape(p)}</p>`)
       .join("");
