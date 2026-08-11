@@ -17,6 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <nav>
+          <a href="/">Feed</a>
+          <a href="/about">About</a>
+        </nav>
         {children}
         <footer>
           <a href="/feed.xml">RSS</a>

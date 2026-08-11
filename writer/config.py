@@ -66,6 +66,9 @@ KILL_SWITCH = _bool("KILL_SWITCH", False)
 ARXIV_API = _str("ARXIV_API", "https://export.arxiv.org/api/query")
 ARXIV_DELAY = _float("ARXIV_DELAY", 3.0)    # seconds between arXiv requests
 CHUNK_TOK = _int("CHUNK_TOK", 2_000)        # creative chunk size
+# The creative pool is filled from an index page plus anything in corpus/.
+CREATIVE_INDEX = _str("CREATIVE_INDEX", "https://www.ubu.com/papers/index.html")
+CREATIVE_DELAY = _float("CREATIVE_DELAY", 2.0)   # seconds between documents
 FETCH_TIMEOUT = _float("FETCH_TIMEOUT", 30.0)
 
 
